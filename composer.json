@@ -19,8 +19,15 @@
 			"RobRichards\\WsePhp\\" : "src"
 		}
 	},
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "https://github.com/fiberpay/xmlseclibs"
+		}
+	],
 	"require" : {
 		"php" : ">= 5.3",
-		"robrichards/xmlseclibs" : ">=3.0.4"
+		"robrichards/xmlseclibs" : "dev-master",
+		"ext-openssl": "*"
 	}
 }
