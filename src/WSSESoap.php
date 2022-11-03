@@ -218,6 +218,58 @@ class WSSESoap
         }
     }
 
+	/**
+	 * @param $cert
+	 *
+	 * @return void
+	 * @throws Exception
+	 */
+	public function attachX509DataToSig($cert)
+	{
+		if (!isset($cert)) throw new \Exception('valid x509 certificate is required');
+
+		$data = openssl_x509_parse($cert, true);
+
+		$issuerName = array();
+		foreach ($data['subject'] as $key => $name) {
+			$issuerName[] = "$key=$name";
+		}
+
+		$issuerName = implode(',', $issuerName);
+		$serialNumber = $data['serialNumber'];
+
+		$objXMLSecDSig = new XMLSecurityDSig();
+		if ($objDSig = $objXMLSecDSig->locateSignature($this->soapDoc)) {
+			$this->SOAPXPath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
+			$query = './secdsig:KeyInfo';
+			$nodeset = $this->SOAPXPath->query($query, $objDSig);
+			$keyInfo = $nodeset->item(0);
+			if (!$keyInfo) {
+				$keyInfo = $objXMLSecDSig->createNewSignNode('KeyInfo');
+				$objDSig->appendChild($keyInfo);
+			}
+
+			$tokenRef = $this->soapDoc->createElementNS(self::WSSENS, self::WSSEPFX . ':SecurityTokenReference');
+			$x509Data = $this->soapDoc->createElement('ds:X509Data');
+
+			$x509IssuerSerial = $this->soapDoc->createElement('ds:X509IssuerSerial');
+
+			$x509IssuerName = $this->soapDoc->createElement('ds:X509IssuerName', $issuerName);
+			$x509IssuerSerial->appendChild($x509IssuerName);
+
+			$x509SerialNumber = $this->soapDoc->createElement('ds:X509SerialNumber', $serialNumber);
+			$x509IssuerSerial->appendChild($x509SerialNumber);
+
+			$x509Data->appendChild($x509IssuerSerial);
+
+			$tokenRef->appendChild($x509Data);
+
+			$keyInfo->appendChild($tokenRef);
+		} else {
+			throw new Exception('Unable to locate digital signature');
+		}
+	}
+
     public function signSoapDoc($objKey, $options = null)
     {
         $objDSig = new XMLSecurityDSig();
